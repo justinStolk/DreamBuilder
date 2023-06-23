@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe8ecb7759879d24cab91e1bdebcaf1d, type: 3}
+  m_Name: Road
+  m_EditorClassIdentifier: 
+  graphic: {fileID: 0}
+  description: 'A straight road.
+
+    +1 for every road it connects to.'
+  spawnedCityComponent: {fileID: 9021765141186493826, guid: c680da1813bcf6b479e6f77fd2bb64ee, type: 3}

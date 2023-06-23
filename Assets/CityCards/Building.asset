@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe8ecb7759879d24cab91e1bdebcaf1d, type: 3}
+  m_Name: Building
+  m_EditorClassIdentifier: 
+  graphic: {fileID: 0}
+  description: 'A small building to live in.
+
+    +1 for every building within it''s
+    zone.
+
+    +5 if the door faces a road.'
+  spawnedCityComponent: {fileID: 9021765141186493826, guid: 0bb1ed232c0b8a7418ecd9739b49b30a, type: 3}
