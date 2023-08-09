@@ -107,19 +107,18 @@ namespace ChatClientExample
             msg.SerializeObject(ref writer);
             networkDriver.EndSend(writer);
         }
-        public void SendRPCToServer(RPCMessage message)
+        public void SendNetworkMessage(MessageHeader header)
         {
             networkDriver.BeginSend(connection, out var writer);
-            message.SerializeObject(ref writer);
+            header.SerializeObject(ref writer);
             networkDriver.EndSend(writer);
         }
+
         public void SendMessageOnServer(string message)
         {
-            networkDriver.BeginSend(connection, out var writer);
             ChatMessage chatMessage = new ChatMessage();
             chatMessage.Message = message;
-            chatMessage.SerializeObject(ref writer);
-            networkDriver.EndSend(writer);
+            SendNetworkMessage(chatMessage);
         }
         static void HandleHandshakeResponse(object handler, MessageHeader header)
         {

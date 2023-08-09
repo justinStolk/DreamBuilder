@@ -23,30 +23,38 @@ public class LocalGameManager : MonoBehaviour
             msg.target = activeComponent;
             msg.TargetID = activeComponent.NetworkID;
             msg.MethodName = "Rotate";
-            client.SendRPCToServer(msg);
+            client.SendNetworkMessage(msg);
         }
         if (Input.GetMouseButtonDown(0))
         {
             Debug.Log("Should be placed on server");
             //    activeComponent.PlaceComponent();
-            RPCMessage msg = new RPCMessage();
-            msg.target = activeComponent;
+
+            PlacementMessage msg = new PlacementMessage();
             msg.TargetID = activeComponent.NetworkID;
-            msg.MethodName = "PlaceComponent";
-            client.SendRPCToServer(msg);
+            msg.Location = activeComponent.transform.position;
+            client.SendNetworkMessage(msg);
+
+
+            //RPCMessage msg = new RPCMessage();
+            //msg.target = activeComponent;
+            //msg.TargetID = activeComponent.NetworkID;
+            //msg.MethodName = "PlaceComponent";
+            //client.SendRPCToServer(msg);
         }
         Ray mouseRay = Camera.main.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(mouseRay, out RaycastHit hit, floorMask))
         {
             Debug.Log("Should move the object on the server");
             Vector3Int targetPosition = new(Mathf.RoundToInt(hit.transform.position.x), 0, Mathf.RoundToInt(hit.transform.position.z));
+
             //activeComponent.MoveToPosition(targetPosition);
             RPCMessage msg = new RPCMessage();
             msg.TargetID = activeComponent.NetworkID;
             msg.target = activeComponent;
             msg.MethodName = "MoveToPosition";
             msg.data = new object[1] { targetPosition };
-            client.SendRPCToServer(msg);
+            client.SendNetworkMessage(msg);
         }
     }
     public void ReceiveCityComponent(NetworkCityComponent component)

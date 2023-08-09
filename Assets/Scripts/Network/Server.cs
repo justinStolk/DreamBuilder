@@ -18,6 +18,7 @@ namespace ChatClientExample
         CHAT_QUIT,
         CREATE_ELEMENT,
         REMOVE_ELEMENT,
+        PLACE_ELEMENT,
         NETWORK_SPAWN,
         END_TURN,
         PING,
@@ -32,6 +33,7 @@ namespace ChatClientExample
             { NetworkMessageType.HANDSHAKE_RESPONSE,        typeof(HandshakeResponseMessage) },
             { NetworkMessageType.CHAT_MESSAGE,              typeof(ChatMessage) },
             { NetworkMessageType.END_TURN,                  typeof(TurnEndMessage) },
+            { NetworkMessageType.PLACE_ELEMENT,             typeof(PlacementMessage) },
             //{ NetworkMessageType.CHAT_QUIT,                 typeof(ChatQuitMessage) },
             { NetworkMessageType.NETWORK_SPAWN,             typeof(SpawnMessage) },
             //{ NetworkMessageType.NETWORK_DESTROY,           typeof(DestroyMessage) },
@@ -65,9 +67,11 @@ namespace ChatClientExample
             { NetworkMessageType.HANDSHAKE, HandleClientHandshake },
             { NetworkMessageType.CHAT_MESSAGE, HandleClientMessage },
             { NetworkMessageType.NETWORK_SPAWN, HandleSpawn },
-            { NetworkMessageType.END_TURN, HandleTurnEnd }
+            { NetworkMessageType.END_TURN, HandleTurnEnd },
+            { NetworkMessageType.PLACE_ELEMENT, HandleElementPlacement }
         };
 
+        public static Server ServerInstance { get; private set; }
 
         public NetworkDriver m_Driver;
         public NetworkPipeline m_Pipeline;
@@ -76,6 +80,19 @@ namespace ChatClientExample
         public ChatCanvas chat;
         private int playerAmount;
         private int currentPlayer;
+
+        private Dictionary<Vector3, NetworkCityComponent> placedComponents = new();
+
+        private void Awake()
+        {
+            if(ServerInstance != null)
+            {
+                Debug.LogError("There is already a server instance! There should be only one!");
+                Destroy(gameObject);
+                return;
+            }
+            ServerInstance = this;
+        }
 
         void Start()
         {
@@ -303,6 +320,31 @@ namespace ChatClientExample
         //    }
         //}
 
+        private static void HandleElementPlacement(object handler, NetworkConnection con, MessageHeader header)
+        {
+            Server serv = handler as Server;
+            PlacementMessage msg = header as PlacementMessage;
+
+            if (!serv.placedComponents.ContainsKey(msg.Location) && NetworkManager.Instance.GetReference(msg.TargetID, out GameObject obj))
+            {
+                NetworkCityComponent ncc = obj.GetComponent<NetworkCityComponent>();
+                if (ncc == null)
+                {
+                    Debug.LogError("Target is not a city component, this is bad formatting");
+                    return;
+                }
+                ncc.PlaceComponent();
+                RPCMessage rpc = new RPCMessage();
+                rpc.TargetID = msg.TargetID;
+                rpc.MethodName = "PlaceComponent";
+                foreach (NetworkConnection c in serv.m_Connections)
+                {
+                    serv.m_Driver.BeginSend(c, out var writer);
+                    rpc.SerializeObject(ref writer);
+                    serv.m_Driver.EndSend(writer);
+                }
+            }
+        }
         static void HandleRPC(object handler, NetworkConnection connection, MessageHeader header)
         {
             Debug.Log("Received an RPC request from a client");

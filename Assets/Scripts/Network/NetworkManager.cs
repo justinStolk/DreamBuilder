@@ -51,7 +51,6 @@ public class NetworkManager : MonoBehaviour
                 beh = obj.AddComponent<NetworkedBehaviour>();
             }
             beh.NetworkID = id;
-            Debug.Log(beh.NetworkID);
 
             networkedReferences.Add(id, obj);
 

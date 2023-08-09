@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using ChatClientExample;
 
 public abstract class RemoteCityComponent : NetworkCityComponent
 {
@@ -12,11 +13,12 @@ public abstract class RemoteCityComponent : NetworkCityComponent
 
     public override void PlaceComponent()
     {
-        if (CanPlaceComponent())
-        {
-            // Place the city component
-            // Code to end the turn, called on the server
-        }
+        //if (CanPlaceComponent())
+        //{
+            
+        //    // Place the city component
+        //    // Code to end the turn, called on the server
+        //}
 
     }
 
@@ -24,8 +26,8 @@ public abstract class RemoteCityComponent : NetworkCityComponent
     {
         transform.Rotate(new Vector3(0, 90, 0));
     }
-    protected bool CanPlaceComponent()
-    {
-        return !placedComponents.ContainsKey(transform.position);
-    }
+    //protected bool CanPlaceComponent()
+    //{
+    //    return !placedComponents.ContainsKey(transform.position);
+    //}
 }
