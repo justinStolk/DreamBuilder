@@ -17,9 +17,9 @@ namespace ChatClientExample
         CHAT_MESSAGE,
         CHAT_QUIT,
         CREATE_ELEMENT,
-        MOVE_ELEMENT,
-        ROTATE_ELEMENT,
         REMOVE_ELEMENT,
+        NETWORK_SPAWN,
+        END_TURN,
         PING,
         PONG,
         RPC
@@ -31,8 +31,9 @@ namespace ChatClientExample
             { NetworkMessageType.HANDSHAKE,                 typeof(HandshakeMessage) },
             { NetworkMessageType.HANDSHAKE_RESPONSE,        typeof(HandshakeResponseMessage) },
             { NetworkMessageType.CHAT_MESSAGE,              typeof(ChatMessage) },
+            { NetworkMessageType.END_TURN,                  typeof(TurnEndMessage) },
             //{ NetworkMessageType.CHAT_QUIT,                 typeof(ChatQuitMessage) },
-            //{ NetworkMessageType.NETWORK_SPAWN,             typeof(SpawnMessage) },
+            { NetworkMessageType.NETWORK_SPAWN,             typeof(SpawnMessage) },
             //{ NetworkMessageType.NETWORK_DESTROY,           typeof(DestroyMessage) },
             //{ NetworkMessageType.NETWORK_UPDATE_POSITION,   typeof(UpdatePositionMessage) },
             //{ NetworkMessageType.INPUT_UPDATE,              typeof(InputUpdateMessage) },
@@ -59,17 +60,22 @@ namespace ChatClientExample
         //    { NetworkMessageType.REMOVE_ELEMENT, HandleObjectRemoval }
         //};
 
-        static Dictionary<NetworkMessageType, ServerMessageHandler> networkHeaderHandlers = new Dictionary<NetworkMessageType, ServerMessageHandler>{ 
+        static Dictionary<NetworkMessageType, ServerMessageHandler> networkHeaderHandlers = new Dictionary<NetworkMessageType, ServerMessageHandler>{
             { NetworkMessageType.RPC, HandleRPC },
             { NetworkMessageType.HANDSHAKE, HandleClientHandshake },
-            { NetworkMessageType.CHAT_MESSAGE, HandleClientMessage }
+            { NetworkMessageType.CHAT_MESSAGE, HandleClientMessage },
+            { NetworkMessageType.NETWORK_SPAWN, HandleSpawn },
+            { NetworkMessageType.END_TURN, HandleTurnEnd }
         };
+
 
         public NetworkDriver m_Driver;
         public NetworkPipeline m_Pipeline;
         private NativeList<NetworkConnection> m_Connections;
         private Dictionary<NetworkConnection, string> nameList = new Dictionary<NetworkConnection, string>();
         public ChatCanvas chat;
+        private int playerAmount;
+        private int currentPlayer;
 
         void Start()
         {
@@ -108,6 +114,7 @@ namespace ChatClientExample
                         nameList.Remove(m_Connections[i]);
                     }
                     m_Connections.RemoveAtSwapBack(i);
+                    playerAmount--;
                     // This little trick means we can alter the contents of the list without breaking / skipping instances
                     --i;
                 }
@@ -117,7 +124,15 @@ namespace ChatClientExample
             while ((c = m_Driver.Accept()) != default(NetworkConnection))
             {
                 m_Connections.Add(c);
-                Debug.Log("Accepted a connection");
+                playerAmount++;
+                if(playerAmount == 2)
+                {
+                    uint nextId = NetworkManager.NextNetworkID;
+                    NetworkManager.Instance.SpawnWithId((NetworkSpawnObject)Random.Range(0, 6), nextId, out GameObject cityComponent);
+
+                    // We can start the match
+                }
+               // Debug.Log("Accepted a connection");
             }
             DataStreamReader stream;
             for (int i = 0; i < m_Connections.Length; i++)
@@ -196,67 +211,101 @@ namespace ChatClientExample
                 server.m_Driver.EndSend(writer);
             }
         }
-        static void HandleClientHandshake(object handler, NetworkConnection connection, DataStreamReader stream)
+        private static void HandleSpawn(object handler, NetworkConnection con, MessageHeader header)
         {
-            // Pop name
-            FixedString128Bytes str = stream.ReadFixedString128();
-
             Server serv = handler as Server;
-
-            // Add to list
-            serv.nameList.Add(connection, str.ToString());
-            serv.chat.NewMessage($"{str.ToString()} has joined the chat.", ChatCanvas.joinColor);
-
-            // Send message back
-            DataStreamWriter writer;
-            int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, connection, out writer);
-
-            // non-0 is an error code
-            if (result == 0)
+            SpawnMessage spawnMessage = header as SpawnMessage;
+           
+            NetworkManager.Instance.SpawnWithId(spawnMessage.SpawnedObject, spawnMessage.ID, out GameObject spawn);
+            NetworkedBehaviour behaviour = spawn.GetComponent<NetworkedBehaviour>();
+            if(behaviour == null)
             {
-                writer.WriteUInt((uint)NetworkMessageType.HANDSHAKE_RESPONSE);
-                writer.WriteFixedString128(new FixedString128Bytes($"Welcome { str.ToString() }!"));
+                behaviour = spawn.AddComponent<NetworkedBehaviour>();
+            }
+            behaviour.NetworkID = spawnMessage.ID;
+            Debug.Log(behaviour.NetworkID);
 
+            for (int i = 0; i < serv.m_Connections.Length; i++)
+            {
+                serv.m_Driver.BeginSend(serv.m_Connections[i], out var writer);
+                spawnMessage.SerializeObject(ref writer);
                 serv.m_Driver.EndSend(writer);
             }
-            else
-            {
-                Debug.LogError($"Could not write message to driver: {result}", serv);
-            }
-        }
 
-        static void HandleClientMessage(object handler, NetworkConnection connection, DataStreamReader stream)
-        {
-            // Pop message
-            FixedString128Bytes str = stream.ReadFixedString128();
-
-            Server serv = handler as Server;
-            if (serv.nameList.ContainsKey(connection))
-            {
-                serv.chat.NewMessage($"{serv.nameList[connection]}: { str.ToString()} ", ChatCanvas.chatColor);
-            }
-            else
-            {
-                Debug.LogError($"Received message from unlisted connection: { str } ");
-            }
         }
-        static void HandleClientExit(object handler, NetworkConnection connection, DataStreamReader stream)
+        static void HandleTurnEnd(object handler, NetworkConnection connection, MessageHeader header)
         {
             Server serv = handler as Server;
-            if (serv.nameList.ContainsKey(connection))
+            TurnEndMessage turnEndMessage = header as TurnEndMessage;
+            for (int i = 0; i < serv.m_Connections.Length; i++)
             {
-                serv.chat.NewMessage($"{serv.nameList[connection]} has left the chat.", ChatCanvas.leaveColor);
-
-                connection.Disconnect(serv.m_Driver);
-            }
-            else
-            {
-                Debug.LogError("Received exit from unlisted connection");
+                serv.m_Driver.BeginSend(serv.m_Connections[i], out var writer);
+                turnEndMessage.SerializeObject(ref writer);
+                serv.m_Driver.EndSend(writer);
             }
         }
+        //static void HandleClientHandshake(object handler, NetworkConnection connection, DataStreamReader stream)
+        //{
+        //    // Pop name
+        //    FixedString128Bytes str = stream.ReadFixedString128();
+
+        //    Server serv = handler as Server;
+
+        //    // Add to list
+        //    serv.nameList.Add(connection, str.ToString());
+        //    serv.chat.NewMessage($"{str.ToString()} has joined the chat.", ChatCanvas.joinColor);
+
+        //    // Send message back
+        //    DataStreamWriter writer;
+        //    int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, connection, out writer);
+
+        //    // non-0 is an error code
+        //    if (result == 0)
+        //    {
+        //        writer.WriteUInt((uint)NetworkMessageType.HANDSHAKE_RESPONSE);
+        //        writer.WriteFixedString128(new FixedString128Bytes($"Welcome { str.ToString() }!"));
+
+        //        serv.m_Driver.EndSend(writer);
+        //    }
+        //    else
+        //    {
+        //        Debug.LogError($"Could not write message to driver: {result}", serv);
+        //    }
+        //}
+
+        //static void HandleClientMessage(object handler, NetworkConnection connection, DataStreamReader stream)
+        //{
+        //    // Pop message
+        //    FixedString128Bytes str = stream.ReadFixedString128();
+
+        //    Server serv = handler as Server;
+        //    if (serv.nameList.ContainsKey(connection))
+        //    {
+        //        serv.chat.NewMessage($"{serv.nameList[connection]}: { str.ToString()} ", ChatCanvas.chatColor);
+        //    }
+        //    else
+        //    {
+        //        Debug.LogError($"Received message from unlisted connection: { str } ");
+        //    }
+        //}
+        //static void HandleClientExit(object handler, NetworkConnection connection, DataStreamReader stream)
+        //{
+        //    Server serv = handler as Server;
+        //    if (serv.nameList.ContainsKey(connection))
+        //    {
+        //        serv.chat.NewMessage($"{serv.nameList[connection]} has left the chat.", ChatCanvas.leaveColor);
+
+        //        connection.Disconnect(serv.m_Driver);
+        //    }
+        //    else
+        //    {
+        //        Debug.LogError("Received exit from unlisted connection");
+        //    }
+        //}
 
         static void HandleRPC(object handler, NetworkConnection connection, MessageHeader header)
         {
+            Debug.Log("Received an RPC request from a client");
             Server serv = handler as Server;
             RPCMessage msg = header as RPCMessage;
             
@@ -265,16 +314,16 @@ namespace ChatClientExample
                 serv.m_Driver.BeginSend(c, out var writer);
                 msg.SerializeObject(ref writer);
                 serv.m_Driver.EndSend(writer);
-                //// try to call the function
-                //try
-                //{
-                //    msg.mInfo.Invoke(msg.target, msg.data);
-                //}
-                //catch (System.Exception e)
-                //{
-                //    Debug.Log(e.Message);
-                //    Debug.Log(e.StackTrace);
-                //}
+                // try to call the function
+                try
+                {
+                    msg.mInfo.Invoke(msg.target, msg.data);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.Log(e.Message);
+                    Debug.Log(e.StackTrace);
+                }
 
             }
         }

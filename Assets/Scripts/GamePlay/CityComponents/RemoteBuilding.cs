@@ -5,5 +5,8 @@ using ChatClientExample;
 
 public class RemoteBuilding : RemoteCityComponent
 {
-
+    public override void PlaceComponent()
+    {
+        base.PlaceComponent();
+    }
 }

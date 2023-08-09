@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Networking.Transport;
 using Unity.Collections;
+using UnityEngine.Events;
 
 namespace ChatClientExample
 {
@@ -15,10 +16,13 @@ namespace ChatClientExample
         private NetworkConnection connection;
         private bool Done;
 
+        [SerializeField] private UnityEvent<NetworkCityComponent> onComponentSpawned;
+
         static Dictionary<NetworkMessageType, ClientMessageHandler> clientHeaderHandlers = new() {
             { NetworkMessageType.RPC, HandleRPC },
             { NetworkMessageType.HANDSHAKE_RESPONSE, HandleHandshakeResponse },
-            { NetworkMessageType.CHAT_MESSAGE, HandleChatMessage }
+            { NetworkMessageType.CHAT_MESSAGE, HandleChatMessage },
+            { NetworkMessageType.NETWORK_SPAWN, HandleSpawn }
         };
         // Start is called before the first frame update
         void Start()
@@ -51,7 +55,7 @@ namespace ChatClientExample
 
                 if (cmd == NetworkEvent.Type.Connect)
                 {
-                    Debug.Log("We are now connected to the server");
+                    //Debug.Log("We are now connected to the server");
 
                     networkDriver.BeginSend(connection, out var writer);
 
@@ -95,6 +99,20 @@ namespace ChatClientExample
 
 
         }
+        public void DBG_RequestSpawnOnServer()
+        {
+            networkDriver.BeginSend(connection, out var writer);
+            SpawnMessage msg = new SpawnMessage();
+            msg.SpawnedObject = (NetworkSpawnObject)Random.Range(0, 6);
+            msg.SerializeObject(ref writer);
+            networkDriver.EndSend(writer);
+        }
+        public void SendRPCToServer(RPCMessage message)
+        {
+            networkDriver.BeginSend(connection, out var writer);
+            message.SerializeObject(ref writer);
+            networkDriver.EndSend(writer);
+        }
         public void SendMessageOnServer(string message)
         {
             networkDriver.BeginSend(connection, out var writer);
@@ -111,6 +129,17 @@ namespace ChatClientExample
             client.chat.NewMessage(response.Response, ChatCanvas.joinColor);
 
         }
+        static void HandleSpawn(object handler, MessageHeader header)
+        {
+            Client client = handler as Client;
+            SpawnMessage spawnMessage = header as SpawnMessage;
+
+            NetworkManager.Instance.GetReference(spawnMessage.ID, out GameObject cityComponent);
+
+            NetworkCityComponent ncc = cityComponent.GetComponent<NetworkCityComponent>();
+            ncc.NetworkID = spawnMessage.ID;
+            client.onComponentSpawned?.Invoke(ncc);
+        }
         static void HandleChatMessage(object handler, MessageHeader header)
         {
             Client client = handler as Client;
@@ -122,10 +151,18 @@ namespace ChatClientExample
         {
             Client client = handler as Client;
             RPCMessage msg = header as RPCMessage;
+            uint targetId = msg.TargetID;
             // try to call the function
             try
             {
-                msg.mInfo.Invoke(msg.target, msg.data);
+                if(NetworkManager.Instance.GetReference(targetId, out GameObject obj))
+                {
+                    NetworkCityComponent ncc = obj.GetComponent<NetworkCityComponent>();
+                    if(ncc != null)
+                    {
+                        msg.mInfo.Invoke(ncc, msg.data);
+                    }
+                }
             }
             catch (System.Exception e)
             {

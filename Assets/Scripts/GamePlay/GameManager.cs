@@ -16,6 +16,8 @@ public class GameManager : MonoBehaviour
     private CityGrid cityGrid;
     private int score;
 
+    private bool isPlayerTurn;
+
     // Start is called before the first frame update
     void Start()
     {

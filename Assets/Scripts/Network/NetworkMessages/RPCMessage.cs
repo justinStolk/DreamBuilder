@@ -11,7 +11,7 @@ namespace ChatClientExample
     {
         static NetworkManager networkManager;
         public override NetworkMessageType Type => NetworkMessageType.RPC;
-        //public uint NetworkId;
+        public uint TargetID;
         public NetworkedBehaviour target;
         public string MethodName;
         public object[] data;
@@ -22,6 +22,7 @@ namespace ChatClientExample
         public override void SerializeObject(ref DataStreamWriter writer)
         {
             base.SerializeObject(ref writer);
+            writer.WriteUInt(TargetID);
             writer.WriteFixedString128(MethodName);
 
             mInfo = target.GetType().GetMethod(MethodName);
@@ -56,7 +57,15 @@ namespace ChatClientExample
                 {
                     Vector2Int vec = (Vector2Int)data[i];
                     writer.WriteInt(vec.x);
-                    writer.WriteInt(vec.y);                }
+                    writer.WriteInt(vec.y);
+                }
+                else if (parameters[i].ParameterType == typeof(Vector3Int))
+                {
+                    Vector3Int vec = (Vector3Int)data[i];
+                    writer.WriteInt(vec.x);
+                    writer.WriteInt(vec.y);
+                    writer.WriteInt(vec.z);
+                }
                 else
                 {
                     throw new System.ArgumentException($"Unhandled RPCType: { parameters[i].ParameterType.ToString() }");
@@ -67,7 +76,7 @@ namespace ChatClientExample
         public override void DeserializeObject(ref DataStreamReader reader)
         {
             base.DeserializeObject(ref reader);
-
+            TargetID = reader.ReadUInt();
             //NetworkId = reader.ReadUInt();
             MethodName = reader.ReadFixedString128().ToString();
             //TODO: Find a better way to do this...
@@ -76,7 +85,7 @@ namespace ChatClientExample
             // -> this works because the object itself knows its type (e.g.PlayerBehaviour), even if we treat it as its base(NetworkedBehaviour)
             
             //GameObject obj;
-            if (networkManager.GetReference(ID, out GameObject obj))
+            if (networkManager.GetReference(TargetID, out GameObject obj))
             {
                 target = obj.GetComponent<NetworkedBehaviour>();
                 mInfo = target.GetType().GetMethod(MethodName);
@@ -87,7 +96,7 @@ namespace ChatClientExample
             }
             else
             {
-                Debug.LogError($"Could not find object with id { ID } ");
+                Debug.LogError($"Could not find object with id { TargetID } ");
             }
             // Extract Parameter info
             parameters = mInfo.GetParameters();
@@ -115,6 +124,10 @@ namespace ChatClientExample
                 else if (parameters[i].ParameterType == typeof(Vector2Int))
                 {
                     data[i] = new Vector2Int(reader.ReadInt(), reader.ReadInt());
+                }
+                else if (parameters[i].ParameterType == typeof(Vector3Int))
+                {
+                    data[i] = new Vector3Int(reader.ReadInt(), reader.ReadInt(), reader.ReadInt());
                 }
                 else
                 {

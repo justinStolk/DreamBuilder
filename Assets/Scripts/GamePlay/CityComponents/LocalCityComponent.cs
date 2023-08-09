@@ -3,26 +3,30 @@ using System.Collections.Generic;
 using UnityEngine;
 using ChatClientExample;
 
-public abstract class LocalCityComponent : NetworkCityComponent
+public class LocalCityComponent : NetworkCityComponent
 {
-    public override void MoveToPosition(Vector3 newPosition)
+
+    public override void MoveToPosition(Vector3Int newPosition)
     {
-        RPCMessage message = new RPCMessage();
-        message.target = this;
-        message.MethodName = "MoveToPosition";
+        transform.position = newPosition;
+        //RPCMessage message = new RPCMessage();
+        //message.target = this;
+        //message.MethodName = "MoveToPosition";
     }
 
     public override void PlaceComponent()
     {
-        RPCMessage message = new RPCMessage();
-        message.target = this;
-        message.MethodName = "PlaceComponent";
+        Debug.Log("Should place at this position");
+        //RPCMessage message = new RPCMessage();
+        //message.target = this;
+        //message.MethodName = "PlaceComponent";
     }
 
     public override void Rotate()
     {
-        RPCMessage message = new RPCMessage();
-        message.target = this;
-        message.MethodName = "Rotate";
+        transform.Rotate(new Vector3(0, 90, 0));
+        //RPCMessage message = new RPCMessage();
+        //message.target = this;
+        //message.MethodName = "Rotate";
     }
 }

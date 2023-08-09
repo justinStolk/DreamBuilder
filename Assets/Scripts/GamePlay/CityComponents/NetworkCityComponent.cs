@@ -7,5 +7,5 @@ public abstract class NetworkCityComponent : NetworkedBehaviour
 
     public abstract void Rotate();
     public abstract void PlaceComponent();
-    public abstract void MoveToPosition(Vector3 newPosition);
+    public abstract void MoveToPosition(Vector3Int newPosition);
 }
