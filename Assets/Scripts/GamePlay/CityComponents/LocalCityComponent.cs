@@ -17,9 +17,7 @@ public class LocalCityComponent : NetworkCityComponent
     public override void PlaceComponent()
     {
         Debug.Log("Should place at this position");
-        //RPCMessage message = new RPCMessage();
-        //message.target = this;
-        //message.MethodName = "PlaceComponent";
+
     }
 
     public override void Rotate()

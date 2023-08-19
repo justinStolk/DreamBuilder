@@ -273,7 +273,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9021765141186493828}
-  - component: {fileID: -7935325380578742403}
+  - component: {fileID: 6926530357539352070}
   m_Layer: 0
   m_Name: SmallBuilding
   m_TagString: Untagged
@@ -298,7 +298,7 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &-7935325380578742403
+--- !u!114 &6926530357539352070
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -307,7 +307,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 9021765141186493826}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0d26ca0b03abb0047ac0a3a9c4fe7585, type: 3}
+  m_Script: {fileID: 11500000, guid: 1dd81e20207fe7149942ee0acd42a40a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   NetworkID: 0

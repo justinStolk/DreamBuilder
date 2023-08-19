@@ -71,8 +71,6 @@ namespace ChatClientExample
             { NetworkMessageType.PLACE_ELEMENT, HandleElementPlacement }
         };
 
-        public static Server ServerInstance { get; private set; }
-
         public NetworkDriver m_Driver;
         public NetworkPipeline m_Pipeline;
         private NativeList<NetworkConnection> m_Connections;
@@ -82,17 +80,6 @@ namespace ChatClientExample
         private int currentPlayer;
 
         private Dictionary<Vector3, NetworkCityComponent> placedComponents = new();
-
-        private void Awake()
-        {
-            if(ServerInstance != null)
-            {
-                Debug.LogError("There is already a server instance! There should be only one!");
-                Destroy(gameObject);
-                return;
-            }
-            ServerInstance = this;
-        }
 
         void Start()
         {
@@ -164,6 +151,8 @@ namespace ChatClientExample
                     {
                         NetworkMessageType msgType = (NetworkMessageType)stream.ReadUShort();
                         MessageHeader header = (MessageHeader)System.Activator.CreateInstance(NetworkMessageInfo.TypeMap[msgType]);
+                        Debug.Log(header);
+
                         header.DeserializeObject(ref stream);
 
                         // First UInt is always message type (this is our own first design choice)
@@ -173,8 +162,9 @@ namespace ChatClientExample
                             {
                                 networkHeaderHandlers[msgType].Invoke(this, m_Connections[i], header);
                             }
-                            catch
+                            catch(System.Exception e)
                             {
+                                Debug.LogError(e);
                                 Debug.LogError("Badly formatted message received...");
                             }
                         }
@@ -333,15 +323,22 @@ namespace ChatClientExample
                     Debug.LogError("Target is not a city component, this is bad formatting");
                     return;
                 }
-                ncc.PlaceComponent();
-                RPCMessage rpc = new RPCMessage();
-                rpc.TargetID = msg.TargetID;
-                rpc.MethodName = "PlaceComponent";
-                foreach (NetworkConnection c in serv.m_Connections)
+                if (!serv.placedComponents.ContainsKey(ncc.transform.position))
                 {
-                    serv.m_Driver.BeginSend(c, out var writer);
-                    rpc.SerializeObject(ref writer);
-                    serv.m_Driver.EndSend(writer);
+                    ncc.PlaceComponent();
+                    RemoteCityComponent rcc = ncc as RemoteCityComponent;
+
+                    int score = rcc.EvaluateNeighbourScore(GetNeighbours(serv, rcc.transform.position));
+                    Debug.Log(score);
+                    //RPCMessage rpc = new RPCMessage();
+                    //rpc.TargetID = msg.TargetID;
+                    //rpc.MethodName = "PlaceComponent";
+                    //foreach (NetworkConnection c in serv.m_Connections)
+                    //{
+                    //    serv.m_Driver.BeginSend(c, out var writer);
+                    //    rpc.SerializeObject(ref writer);
+                    //    serv.m_Driver.EndSend(writer);
+                    //}
                 }
             }
         }
@@ -369,8 +366,27 @@ namespace ChatClientExample
 
             }
         }
+        private static List<NetworkCityComponent> GetNeighbours(object handler, Vector3 originalPosition)
+        {
+            Server serv = handler as Server;
+            
+            List<NetworkCityComponent> result = new();
 
+            for (int x = -1; x < 2; x++)
+            {
+                for (int y = -1; y < 2; y++)
+                {
+                    Vector3 pos = new Vector3(x, 0, y);
+                    if(Mathf.Abs(x) == Mathf.Abs(y) || !serv.placedComponents.ContainsKey(pos))
+                    {
+                        continue;
+                    }
+                    result.Add(serv.placedComponents[pos]);
+                }
+            }
+            return result;
+        }
 
-       }
+    }
 
 }

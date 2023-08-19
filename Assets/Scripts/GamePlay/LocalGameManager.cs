@@ -30,23 +30,26 @@ public class LocalGameManager : MonoBehaviour
             Debug.Log("Should be placed on server");
             //    activeComponent.PlaceComponent();
 
-            PlacementMessage msg = new PlacementMessage();
-            msg.TargetID = activeComponent.NetworkID;
-            msg.Location = activeComponent.transform.position;
-            client.SendNetworkMessage(msg);
-
-
-            //RPCMessage msg = new RPCMessage();
-            //msg.target = activeComponent;
+            //PlacementMessage msg = new PlacementMessage();
             //msg.TargetID = activeComponent.NetworkID;
-            //msg.MethodName = "PlaceComponent";
-            //client.SendRPCToServer(msg);
+            //msg.Location = activeComponent.transform.position;
+            //client.SendNetworkMessage(msg);
+
+
+            RPCMessage msg = new RPCMessage();
+            msg.TargetID = activeComponent.NetworkID;
+            msg.target = activeComponent;
+            msg.MethodName = "PlaceComponent";
+            client.SendNetworkMessage(msg);
         }
         Ray mouseRay = Camera.main.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(mouseRay, out RaycastHit hit, floorMask))
         {
             Debug.Log("Should move the object on the server");
             Vector3Int targetPosition = new(Mathf.RoundToInt(hit.transform.position.x), 0, Mathf.RoundToInt(hit.transform.position.z));
+
+            if (activeComponent.transform.position == targetPosition)
+                return;
 
             //activeComponent.MoveToPosition(targetPosition);
             RPCMessage msg = new RPCMessage();
