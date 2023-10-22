@@ -77,7 +77,7 @@ namespace ChatClientExample
         private Dictionary<NetworkConnection, string> nameList = new Dictionary<NetworkConnection, string>();
         public ChatCanvas chat;
         private int playerAmount;
-        private int currentPlayer;
+        private int currentPlayer = 0;
 
         private Dictionary<Vector3, NetworkCityComponent> placedComponents = new();
 
@@ -95,6 +95,15 @@ namespace ChatClientExample
             else
                 m_Driver.Listen();
             m_Connections = new NativeList<NetworkConnection>(16, Allocator.Persistent);
+
+            for (int i = 0; i < m_Connections.Length; i++)
+            {
+                TurnEndMessage message = new();
+                message.IsMyTurn = i == currentPlayer;
+                m_Driver.BeginSend(m_Connections[i], out var writer);
+                message.SerializeObject(ref writer);
+                m_Driver.EndSend(writer);
+            }
         }
         // Write this immediately after creating the above Start calls, so you don't forget
         //  Or else you well get lingering thread sockets, and will have trouble starting new ones!
@@ -330,6 +339,17 @@ namespace ChatClientExample
 
                     int score = rcc.EvaluateNeighbourScore(GetNeighbours(serv, rcc.transform.position));
                     Debug.Log(score);
+                    
+                    serv.currentPlayer = (serv.currentPlayer + 1) % serv.m_Connections.Length;
+
+                    for (int i = 0; i < serv.m_Connections.Length; i++)
+                    {
+                        TurnEndMessage message = new();
+                        message.IsMyTurn = i == serv.currentPlayer;
+                        serv.m_Driver.BeginSend(serv.m_Connections[i], out var writer);
+                        message.SerializeObject(ref writer);
+                        serv.m_Driver.EndSend(writer);
+                    }
                     //RPCMessage rpc = new RPCMessage();
                     //rpc.TargetID = msg.TargetID;
                     //rpc.MethodName = "PlaceComponent";

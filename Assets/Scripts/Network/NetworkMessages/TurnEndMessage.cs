@@ -6,6 +6,8 @@ using UnityEngine;
 
 public class TurnEndMessage : MessageHeader
 {
+    public bool IsMyTurn;
+
     public override NetworkMessageType Type => NetworkMessageType.END_TURN;
 
     public override void SerializeObject(ref DataStreamWriter writer)

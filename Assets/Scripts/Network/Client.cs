@@ -22,7 +22,8 @@ namespace ChatClientExample
             { NetworkMessageType.RPC, HandleRPC },
             { NetworkMessageType.HANDSHAKE_RESPONSE, HandleHandshakeResponse },
             { NetworkMessageType.CHAT_MESSAGE, HandleChatMessage },
-            { NetworkMessageType.NETWORK_SPAWN, HandleSpawn }
+            { NetworkMessageType.NETWORK_SPAWN, HandleSpawn },
+            { NetworkMessageType.END_TURN, HandleTurnEnd }
         };
         // Start is called before the first frame update
         void Start()
@@ -130,10 +131,14 @@ namespace ChatClientExample
         }
         static void HandleSpawn(object handler, MessageHeader header)
         {
+            Debug.Log("Handling Spawn");
             Client client = handler as Client;
             SpawnMessage spawnMessage = header as SpawnMessage;
 
-            NetworkManager.Instance.GetReference(spawnMessage.ID, out GameObject cityComponent);
+            NetworkManager.Instance.SpawnWithId(spawnMessage.SpawnedObject, spawnMessage.ID, out GameObject cityComponent);
+            //NetworkManager.Instance.GetReference(spawnMessage.ID, out GameObject cityComponent);
+            Debug.Log(cityComponent.name);
+            Debug.Log(cityComponent.GetType());
 
             NetworkCityComponent ncc = cityComponent.GetComponent<NetworkCityComponent>();
             ncc.NetworkID = spawnMessage.ID;
@@ -168,6 +173,13 @@ namespace ChatClientExample
                 Debug.Log(e.Message);
                 Debug.Log(e.StackTrace);
             }
+        }
+        static void HandleTurnEnd(object handler, MessageHeader header)
+        {
+            Client client = handler as Client;
+            TurnEndMessage msg = header as TurnEndMessage;
+
+            LocalGameManager.Instance.SetTurn(msg.IsMyTurn);
         }
         private void OnDestroy()
         {

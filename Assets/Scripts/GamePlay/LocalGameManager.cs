@@ -5,11 +5,22 @@ using UnityEngine;
 
 public class LocalGameManager : MonoBehaviour
 {
+    public static LocalGameManager Instance { get; private set; }
+    
     [SerializeField] private LayerMask floorMask;
     [SerializeField] private Client client;
 
-    private LocalCityComponent activeComponent;
+    //private LocalCityComponent activeComponent; 
+    private NetworkCityComponent activeComponent;
+
     private bool isMyTurn = true;
+
+
+    private void Awake()
+    {
+        Instance = this;
+    }
+
     // Update is called once per frame
     void Update()
     {
@@ -30,17 +41,17 @@ public class LocalGameManager : MonoBehaviour
             Debug.Log("Should be placed on server");
             //    activeComponent.PlaceComponent();
 
-            //PlacementMessage msg = new PlacementMessage();
-            //msg.TargetID = activeComponent.NetworkID;
-            //msg.Location = activeComponent.transform.position;
-            //client.SendNetworkMessage(msg);
-
-
-            RPCMessage msg = new RPCMessage();
+            PlacementMessage msg = new PlacementMessage();
             msg.TargetID = activeComponent.NetworkID;
-            msg.target = activeComponent;
-            msg.MethodName = "PlaceComponent";
+            msg.Location = activeComponent.transform.position;
             client.SendNetworkMessage(msg);
+
+
+            //RPCMessage msg = new RPCMessage();
+            //msg.TargetID = activeComponent.NetworkID;
+            //msg.target = activeComponent;
+            //msg.MethodName = "PlaceComponent";
+            //client.SendNetworkMessage(msg);
         }
         Ray mouseRay = Camera.main.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(mouseRay, out RaycastHit hit, floorMask))
@@ -62,8 +73,9 @@ public class LocalGameManager : MonoBehaviour
     }
     public void ReceiveCityComponent(NetworkCityComponent component)
     {
-        activeComponent = component as LocalCityComponent;
+        activeComponent = component;
         Debug.Log(activeComponent);
+        Debug.Log(activeComponent.name);
     }
     public void SetTurn(bool isMyTurn) => this.isMyTurn = isMyTurn;
 }
